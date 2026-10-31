@@ -1,5 +1,6 @@
 import Foundation
 import ObjectiveC
+import MachO
 
 public struct LiveClass: Identifiable, Hashable {
     public let id = UUID()
@@ -54,12 +55,9 @@ public enum Runtime {
             if name.hasPrefix("_") && name.count > 48 { continue }
             let superName = class_getSuperclass(cls).map { String(cString: class_getName($0)) } ?? ""
 
-            var mCount: UInt32 = 0
-            if let methods = class_copyMethodList(cls, &mCount) { free(methods) }
-            var iCount: UInt32 = 0
-            if let ivars = class_copyIvarList(cls, &iCount) { free(ivars) }
-            var pCount: UInt32 = 0
-            if let protos = class_copyProtocolList(cls, &pCount) { free(protos) }
+            let mCount = REKClassMethodCount(cls)
+            let iCount = REKClassIvarCount(cls)
+            let pCount = REKClassProtocolCount(cls)
 
             out.append(LiveClass(name: name, superName: superName, methodCount: Int(mCount),
                                  ivarCount: Int(iCount), protocolCount: Int(pCount),
