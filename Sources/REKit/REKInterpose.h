@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#import <objc/runtime.h>
 
 /// One symbol interposition request.
 typedef struct {
@@ -27,5 +28,10 @@ int rek_last_skipped_count(void);
 
 /// 1 when the main executable is built with chained fixups.
 int rek_main_has_chained_fixups(void);
+
+/// Counts (implemented in REKInterpose.m) so Swift never has to free ObjC runtime buffers.
+uint32_t REKClassMethodCount(Class cls);
+uint32_t REKClassIvarCount(Class cls);
+uint32_t REKClassProtocolCount(Class cls);
 
 #endif
