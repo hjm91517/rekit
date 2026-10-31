@@ -46,6 +46,9 @@ public enum DylibInjector {
 
         let headerOff = sliceStart
         let h = ByteReader(bytes)
+        if arch == "thin" {
+            arch = MachOName.arch(h.u32(headerOff + 4), h.u32(headerOff + 8))
+        }
         guard h.u32(headerOff) == MachOConstants.MH_MAGIC_64 else {
             return PatchResult(success: false, message: "只支持 64 位 Mach-O 切片（arm64/arm64e）",
                                outputURL: nil, patchOffset: 0, freeBytes: 0, sliceArch: arch)
