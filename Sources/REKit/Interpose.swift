@@ -82,7 +82,7 @@ public enum Interpose {
 
     static func rebind(_ table: [(String, UnsafeMutableRawPointer)]) -> (Int, Int, Int, Int) {
         var rebindings = table.map { REKRebinding(name: strdup($0.0), replacement: $0.1, replaced: nil) }
-        let count = rek_rebind_symbols(&rebindings, table.count)
+        let count = Int(rek_rebind_symbols(&rebindings, table.count))
         for r in rebindings { if let n = r.name { free(UnsafeMutablePointer(mutating: n)) } }
         return (count, Int(rek_last_image_count()), Int(rek_chained_fixup_image_count()), Int(rek_last_skipped_count()))
     }
