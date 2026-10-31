@@ -10,6 +10,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#import <objc/runtime.h>
 
 #define REK_LC_DYLD_CHAINED_FIXUPS 0x80000034u
 #define REK_LC_DYLD_EXPORTS_TRIE   0x80000033u
@@ -267,4 +268,28 @@ int rek_rebind_symbols(REKRebinding rebindings[], size_t count) {
         }
     }
     return g_rebound;
+}
+
+uint32_t REKClassMethodCount(Class cls) {
+    if (!cls) return 0;
+    uint32_t n = 0;
+    Method *list = class_copyMethodList(cls, &n);
+    if (list) free(list);
+    return n;
+}
+
+uint32_t REKClassIvarCount(Class cls) {
+    if (!cls) return 0;
+    uint32_t n = 0;
+    Ivar *list = class_copyIvarList(cls, &n);
+    if (list) free(list);
+    return n;
+}
+
+uint32_t REKClassProtocolCount(Class cls) {
+    if (!cls) return 0;
+    uint32_t n = 0;
+    Protocol *__unsafe_unretained *list = class_copyProtocolList(cls, &n);
+    if (list) free(list);
+    return n;
 }
