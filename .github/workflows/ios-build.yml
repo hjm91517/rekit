@@ -15,31 +15,40 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: 安装 PyYAML
+        run: python3 -m pip install --quiet pyyaml
       - name: 校验工程结构 / plist / YAML / 括号平衡
         run: python3 scripts/check_project.py .
 
   test:
     name: 单元测试 (simulator)
-    runs-on: macos-14
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - name: 安装 XcodeGen
         run: brew install xcodegen
       - name: 生成工程
         run: xcodegen generate
+      - name: 选择可用模拟器
+        id: sim
+        run: |
+          SIM=$(xcrun simctl list devices available | grep -E '^ +iPhone' | head -1 | sed -E 's/^ +//; s/ \(.*//')
+          if [ -z "$SIM" ]; then echo "没有可用 iPhone 模拟器" >&2; xcrun simctl list devices available; exit 1; fi
+          echo "使用模拟器: $SIM"
+          echo "name=$SIM" >> "$GITHUB_OUTPUT"
       - name: xcodebuild test
         run: |
           set -o pipefail
           xcodebuild test \
             -project REKit.xcodeproj \
             -scheme REKitApp \
-            -destination 'platform=iOS Simulator,name=iPhone 15' \
+            -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.name }}" \
             -derivedDataPath build \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO | tail -n 120
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO | tail -n 150
 
   build:
     name: 构建未签名 IPA (device)
-    runs-on: macos-14
+    runs-on: macos-latest
     needs: sanity
     steps:
       - uses: actions/checkout@v4
