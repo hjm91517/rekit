@@ -1,0 +1,17 @@
+# macOS / Xcode
+.DS_Store
+build/
+DerivedData/
+*.xcodeproj
+*.xcworkspace
+xcuserdata/
+*.xcuserstate
+
+# Python
+__pycache__/
+*.pyc
+
+# 产物
+*.ipa
+Payload/
+artifacts/
