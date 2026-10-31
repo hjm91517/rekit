@@ -71,20 +71,45 @@ CI 直接推 main 即可，产物在 Actions artifacts：`REKitApp.ipa` + `manif
 
 ## 已验证 / 未验证（不吹）
 
-已验证（CI 里跑）：
+### CI 实测证据（run 41235851084，三个 job 全绿）
 
-- `xcodebuild test` 在 iPhone 15 模拟器上跑通 9 个用例：合成 arm64 Mach-O 解析、宿主二进制解析、熵边界、密钥规则与占位符降级、ZIP stored 读回、注入成功与「填充不足拒绝」、plist 展开、端到端分析报告
-- `xcodebuild build -sdk iphoneos -arch arm64` 编译通过并打出未签名 IPA
-- `scripts/check_project.py` 结构自检：YAML/plist 可解析、括号配对、无硬编码密钥
+| 证据 | 结果 |
+| --- | --- |
+| `sanity`（ubuntu） | `check_project.py` 全项通过：project.yml 引用、Info.plist key、41 个源码文件括号配对、无硬编码密钥 |
+| `test`（macos-latest，iPhone 模拟器） | `Executed 9 tests, with 0 failures` |
+| `build`（macos-latest，arm64 真机） | `xcodebuild build` 通过，产出未签名 IPA |
 
-未在 CI 里验证（需要真机）：
+9 个用例覆盖：合成 arm64 Mach-O 解析、宿主二进制（xctest 可执行文件）解析、Shannon 熵边界、密钥规则 + 占位符降级、ZIP stored 条目读回、`LC_LOAD_DYLIB` 注入成功、填充不足时拒绝注入、plist 展开、端到端分析报告。
 
-- 注入后的 App 实际启动（依赖具体目标 App 的签名与 dylib 依赖）
-- `Interpose` 在真实 chained-fixups 镜像上的重绑定命中率（只有真机日志能证明）
+### 产物实测（从 artifacts 下载后拆包核验）
+
+```
+Payload/REKitApp.app/REKitApp                       72,688 bytes   arm64 MH_EXECUTE, ncmds=21
+  segments: __PAGEZERO __TEXT __DATA_CONST __DATA __LINKEDIT
+  cmds 含 LC_DYLD_CHAINED_FIXUPS(0x80000034) / LC_ENCRYPTION_INFO_64 / LC_BUILD_VERSION
+Payload/REKitApp.app/Frameworks/REKit.framework/    1,002,752 bytes arm64 MH_DYLIB, ncmds=30
+  链接库 10 个，同样带 LC_DYLD_CHAINED_FIXUPS
+bundle: com.chuck.rekitapp  minOS 15.0  framework: com.chuck.rekit (FMWK)
+ipa 大小 701,835 bytes
+```
+
+也就是说：链式重绑定那条代码路径不是摆设——被测二进制自己就带 `LC_DYLD_CHAINED_FIXUPS`。
+
+### CI 环境踩到的坑（已修，写下来省时间）
+
+- `runs-on: macos-14` 在这个账号下会被秒取消（`runner_id: 0`、`steps: []`），换 `macos-latest` 才拿到真机 runner；`macos-13` 直接排队挂死。
+- 框架 target 必须 `GENERATE_INFOPLIST_FILE: YES`，否则打包阶段报 `REKit.framework did not contain an Info.plist`。
+- 模拟器名字不能写死：workflow 里先 `xcrun simctl list devices available` 挑第一台 iPhone，再拼 `-destination`，镜像换代不会炸。
+
+### 还没验证（需要真机，不编）
+
+- 注入后的 App 实际启动（取决于目标 App 的签名与 dylib 依赖是否齐全）
+- `Interpose` 在真实第三方进程上的重绑定命中率（只有真机日志能证明）
 - 越狱路径屏蔽对具体检测库的有效性
 - Frida 脚本在真实进程里的输出
+- 未签名 IPA 直接安装（需要 ldid 自签 / TrollStore / 自签工具）
 
-这些在 App 里都有明确的运行时状态输出（`InterposeStatus.summary`、`Signer.Result.log`），跑一次就知道命中多少，不是靠嘴说。
+以上每一项在 App 里都有运行时状态输出（`InterposeStatus.summary`、`Signer.Result.log`），跑一次就知道命中多少。
 
 ## 边界
 
