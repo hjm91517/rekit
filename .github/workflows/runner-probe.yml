@@ -1,0 +1,16 @@
+name: runner-probe
+on:
+  workflow_dispatch:
+jobs:
+  a:
+    runs-on: macos-13
+    steps:
+      - run: echo hello-macos13 && sw_vers
+  b:
+    runs-on: macos-latest
+    steps:
+      - run: echo hello-macos-latest
+  c:
+    runs-on: macos-14
+    steps:
+      - run: echo hello-macos14
